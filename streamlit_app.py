@@ -9,12 +9,13 @@ st.title("📚 Terry's Ebook Database")
 st.markdown("---")
 
 # 1. Connect to the Google Sheet
-# Replace 'url' with the actual link to your Google Sheet
-# Copy and paste this exact line
-# Replace everything between the /d/ and the /export... with your specific ID
-url = "https://docs.google.com/spreadsheets/d/1BnFTueD2eJABxOOuhkgga0pDRz4fpJCY6Qj49ICZ5eU/export?format=csv"
-conn = st.connection("gsheets", type=GSheetsConnection)
+# Use the direct ID from your spreadsheet
+SHEET_ID = "1BnFTueD2eJABxOOuhkgga0pDRz4fpJCY6Qj49ICZ5eU"
+url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
+# This line reads the data and ignores the 'worksheet' name for a moment 
+# to see if we can get a basic connection first.
+df = conn.read(spreadsheet=url)
 # 2. Fetch the data
 # We tell it to look at the 'Ebook Requests' tab specifically
 df = conn.read(spreadsheet=url, worksheet="Ebook Requests")
