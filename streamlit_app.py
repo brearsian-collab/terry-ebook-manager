@@ -11,7 +11,10 @@ st.markdown("---")
 # 1. Connect to the Google Sheet
 # Replace 'url' with the actual link to your Google Sheet
 # Copy and paste this exact line
-url = "https://docs.google.com/spreadsheets/d/1BnFTueD2eJABxOOuhkgga0pDRz4fpJCY6Qj49ICZ5eU/edit?usp=sharing".strip()
+url = "https://docs.google.com/spreadsheets/d/"
+    "1BnFTueD2eJABxOOuhkgga0pDRz4fpJCY6Qj49ICZ5eU"
+    "/edit?usp=sharing"
+).strip()
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # 2. Fetch the data
