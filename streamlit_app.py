@@ -1,17 +1,26 @@
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 
-# Page setup for tablet view
-st.set_page_config(page_title="Terry's Ebook Manager", layout="wide")
-
 st.title("📚 Terry's Ebook Database")
-st.markdown("---")
 
-# 1. Connect to the Google Sheet
-# Use the direct ID from your spreadsheet
+# This is the 'Clean' ID from your sheet
 SHEET_ID = "1BnFTueD2eJABxOOuhkgga0pDRz4fpJCY6Qj49ICZ5eU"
-url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
+SHEET_NAME = "Ebook%20Requests" # The %20 replaces the space
+
+# We build the URL specifically for a direct download
+url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}"
+
+try:
+    # We use standard pandas to read the URL directly
+    df = pd.read_csv(url)
+    
+    # Display the data
+    st.write(f"Showing {len(df)} records from the master sheet.")
+    st.dataframe(df, use_container_width=True, hide_index=True)
+    
+except Exception as e:
+    st.error("Still having trouble connecting to the sheet.")
+    st.info("Check that the Google Sheet 'Share' settings are set to 'Anyone with the link can view'.")
 
 # This line reads the data and ignores the 'worksheet' name for a moment 
 # to see if we can get a basic connection first.
