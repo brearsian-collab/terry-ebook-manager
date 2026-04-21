@@ -1,54 +1,54 @@
 import streamlit as st
 import pandas as pd
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode
 
-# 1. Page Setup
-st.set_page_config(page_title="Terry's Ebook Manager", layout="wide")
+st.set_page_config(page_title="Terry's Ebook Database", layout="wide")
 
-# Custom CSS to make the search bar look better
+# This CSS makes the app look more like a Windows program (tighter spacing)
 st.markdown("""
     <style>
-    .stTextInput { position: sticky; top: 0; z-index: 999; }
+    .main { background-color: #f0f2f6; }
+    .stApp { max-width: 100%; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("📚 Terry's Ebook Database")
+st.title("📚 Ebook Database Management System")
 
-# 2. Connection Details
 SHEET_ID = "1BnFTueD2eJABxOOuhkgga0pDRz4fpJCY6Qj49ICZ5eU"
-SHEET_NAME = "Ebook%20Requests"
-url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}"
+url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Ebook%20Requests"
 
-# 3. Load Data
 try:
     df = pd.read_csv(url)
     
-    # Navigation Buttons & Search
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        search = st.text_input("🔍 Search for a book, author, or ID:", placeholder="Type here...")
+    # 1. Configure the "Windows-style" Grid
+    gb = GridOptionsBuilder.from_dataframe(df)
     
-    # Filter logic
-    if search:
-        df = df[df.stack().str.contains(search, case=False, na=False).any(level=0)]
+    # Make columns sortable and filterable like Excel
+    gb.configure_default_column(resizable=True, filterable=True, sortable=True, editable=False)
+    
+    # Pin the ID and Title so they stay put when scrolling right
+    gb.configure_column("ID Number", pinned='left', width=100)
+    gb.configure_column("Book Title", pinned='left', width=250)
+    
+    # Enable Pagination (First/Last buttons)
+    gb.configure_pagination(paginationAutoPageSize=False, paginationPageSize=25)
+    
+    # Enable the "Side Bar" for quick filters
+    gb.configure_side_bar()
+    
+    gridOptions = gb.build()
 
-    # 4. Jump to First/Last (Visual Indicators)
-    st.write(f"Displaying {len(df)} records. *Click any column header to sort A-Z.*")
-
-    # 5. The Spreadsheet View
-    # 'height=600' creates the vertical scroll bar
-    # 'use_container_width' creates the horizontal scroll bar if needed
-    st.dataframe(
-        df, 
-        height=600, 
-        use_container_width=True, 
-        hide_index=True
+    # 2. Display the Grid
+    AgGrid(
+        df,
+        gridOptions=gridOptions,
+        data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
+        update_mode=GridUpdateMode.MODEL_CHANGED,
+        fit_columns_on_grid_load=False,
+        theme='balham', # 'balham' is the theme that looks most like a Windows App
+        height=700,
+        width='100%'
     )
 
-    # 6. Quick Navigation Footer
-    f1, f2, f3 = st.columns(3)
-    with f2:
-        if st.button("⬆️ Back to Top"):
-            st.rerun()
-
 except Exception as e:
-    st.error("Connection successful, but check the Sheet column names.")
+    st.error(f"Error connecting: {e}")
