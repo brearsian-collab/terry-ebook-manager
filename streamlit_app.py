@@ -1,66 +1,58 @@
 import streamlit as st
 import pandas as pd
 
-# 1. Page Config & Layout
+# 1. Setup
 st.set_page_config(page_title="Ebook Management", layout="wide")
-
-st.markdown("""
-    <style>
-    footer {visibility: hidden;}
-    .block-container {padding-top: 1rem;}
-    </style>
-    """, unsafe_allow_html=True)
 
 st.title("📚 Ebook Database Management System")
 
-# 2. Connection
+# 2. Data Connection
 SHEET_ID = "1BnFTueD2eJABxOOuhkgga0pDRz4fpJCY6Qj49ICZ5eU"
 url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv"
 
-try:
-    df = pd.read_csv(url)
-    
-    # 3. FORCE ORIGINAL COLUMN ORDER
-    # This keeps ID Number first, then Name, then Title, just like the original layout
+@st.cache_data(ttl=60) # Refreshes every minute automatically
+def load_data():
+    data = pd.read_csv(url)
+    # Define exact order Terry expects
     cols = ["ID Number", "First Name", "Surname", "Book Title", "Date Requested", "Found Date", "Days Searching", "Star Rating", "Date Completed", "Notes"]
-    df = df[[c for c in cols if c in df.columns]]
+    return data[[c for c in cols if c in data.columns]]
 
-    # 4. Navigation & Search UI
-    col1, col2 = st.columns([2, 1])
+try:
+    raw_df = load_data()
+    display_df = raw_df.copy()
+
+    # 3. Navigation Controls
+    col1, col2, col3 = st.columns([2, 1, 1])
     
     with col1:
-        search = st.text_input("🔍 Search Database:", placeholder="Type Author, Title, or ID...")
+        search = st.text_input("🔍 Search Database:", placeholder="Type any name or title...")
     
     with col2:
-        st.write(" ") 
-        nav1, nav2 = st.columns(2)
+        st.write(" ")
+        show_pending = st.toggle("📋 Show Pending Only")
         
-        # We use session_state to remember if Terry wants to see the top or bottom
-        if nav1.button("⏮️ First Record"):
-            st.session_state.view_mode = "First"
-        if nav2.button("⏭️ Last Record"):
-            st.session_state.view_mode = "Last"
+    with col3:
+        st.write(" ")
+        # Toggle between Top and Bottom of list
+        sort_btn = st.radio("Jump to:", ["Top (First)", "Bottom (Last)"], horizontal=True)
 
-    # Default to showing the first records
-    if "view_mode" not in st.session_state:
-        st.session_state.view_mode = "First"
-
-    # 5. Search Logic
+    # 4. Filter and Sort Logic
     if search:
-        search_terms = search.lower().split()
-        mask = df.apply(lambda row: all(term in row.astype(str).str.lower().to_string() for term in search_terms), axis=1)
-        df = df[mask]
+        display_df = display_df[display_df.apply(lambda r: search.lower() in r.astype(str).str.lower().to_string(), axis=1)]
+    
+    if show_pending:
+        # Filters for rows where 'Date Completed' is empty
+        display_df = display_df[display_df['Date Completed'].isna()]
 
-    # 6. Apply "First/Last" Logic by Sorting
-    if st.session_state.view_mode == "Last":
-        df = df.sort_values(by="ID Number", ascending=False)
+    if "Bottom" in sort_btn:
+        display_df = display_df.sort_values(by="ID Number", ascending=False)
     else:
-        df = df.sort_values(by="ID Number", ascending=True)
+        display_df = display_df.sort_values(by="ID Number", ascending=True)
 
-    # 7. Final Spreadsheet Display
+    # 5. The Main Spreadsheet Grid
     st.data_editor(
-        df,
-        height=650,
+        display_df,
+        height=700,
         use_container_width=True,
         hide_index=True,
         column_config={
@@ -70,7 +62,7 @@ try:
         disabled=True
     )
     
-    st.caption(f"Currently viewing: {st.session_state.view_mode} Records | Total: {len(df)}")
+    st.info(f"Viewing {len(display_df)} of {len(raw_df)} total records.")
 
 except Exception as e:
-    st.info("🔄 Synchronizing with Google Sheets... please wait a few seconds.")
+    st.error("Connecting... if this takes more than 10 seconds, please refresh your browser.")
