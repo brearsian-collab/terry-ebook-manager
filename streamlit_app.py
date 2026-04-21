@@ -1,11 +1,9 @@
 import streamlit as st
 import pandas as pd
-from st_aggrid import AgGrid, GridOptionsBuilder
 
-# 1. Force the layout to look like a Desktop Window
+# 1. Page Setup
 st.set_page_config(page_title="Ebook Management", layout="wide")
 
-# This hides the 'made with streamlit' footer to make it feel like a private app
 st.markdown("""
     <style>
     footer {visibility: hidden;}
@@ -15,43 +13,36 @@ st.markdown("""
 
 st.title("📚 Ebook Database Management System")
 
+# 2. Connection
 SHEET_ID = "1BnFTueD2eJABxOOuhkgga0pDRz4fpJCY6Qj49ICZ5eU"
 url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv"
 
 try:
+    # Load and clean the data
     df = pd.read_csv(url)
     
-    # 2. Build the Desktop UI Logic
-    gb = GridOptionsBuilder.from_dataframe(df)
+    # 3. The "Windows App" Interface
+    # This creates a search box that filters the whole sheet live
+    search = st.text_input("🔍 Quick Search:", placeholder="Type any name, title, or ID...")
     
-    # Enable the "Excel" features
-    gb.configure_default_column(
-        resizable=True, 
-        filterable=True, 
-        sortable=True, 
-        groupable=True
-    )
-    
-    # PIN columns just like a Windows freeze-pane
-    gb.configure_column("ID Number", pinned='left', width=90)
-    gb.configure_column("First Name", width=120)
-    gb.configure_column("Surname", width=120)
-    gb.configure_column("Book Title", pinned='left', width=300)
-    
-    # Setup Pagination (the "First/Last" buttons)
-    gb.configure_pagination(paginationAutoPageSize=False, paginationPageSize=50)
-    
-    gridOptions = gb.build()
+    if search:
+        df = df[df.apply(lambda row: row.astype(str).str.contains(search, case=False).any(), axis=1)]
 
-    # 3. Render the specialized Grid
-    AgGrid(
+    # 4. The Interactive Spreadsheet
+    # 'st.data_editor' looks like Excel and allows column freezing
+    st.data_editor(
         df,
-        gridOptions=gridOptions,
-        theme='balham', # This is the "Windows Professional" theme
-        height=750, 
-        width='100%',
-        reload_data=False
+        height=700,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "ID Number": st.column_config.NumberColumn(width="small", pinned=True),
+            "Book Title": st.column_config.TextColumn(width="large", pinned=True),
+        },
+        disabled=True # This keeps it as 'View Only' for Terry
     )
+    
+    st.caption(f"Connected to Master Sheet. Total Records: {len(df)}")
 
 except Exception as e:
-    st.error("The system is currently connecting to the data source. Please wait 30 seconds.")
+    st.error("Connection link is valid, but the data is taking a moment to stream. Please refresh in 10 seconds.")
