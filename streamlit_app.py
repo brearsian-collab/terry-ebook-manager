@@ -8,13 +8,19 @@ SHEET_ID = "1BnFTueD2eJABxOOuhkgga0pDRz4fpJCY6Qj49ICZ5eU"
 url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
 try:
-    # 1. Pull the data directly
+    # 1. Load data and clean up 'None' values
     df = pd.read_csv(url)
-    
-    # 2. Identify columns by position so names don't matter
-    # Position 0 = ID, 1 = First Name, 2 = Surname, 3 = Title
-    id_col = df.columns[0]
-    title_col = df.columns[3] if len(df.columns) > 3 else df.columns[-1]
+    df = df.fillna("")
+
+    # 2. FORCE EXACT COLUMN ORDER
+    # This ensures names/titles don't jump around
+    expected_order = [
+        "ID Number", "First Name", "Surname", "Book Title", 
+        "Date Requested", "Found Date", "Days Searching", 
+        "Star Rating", "Date Completed", "Notes"
+    ]
+    # Filter to only columns that exist, keeping your preferred sequence
+    df = df[[c for c in expected_order if c in df.columns]]
 
     # 3. UI Controls
     c1, c2, c3 = st.columns([2, 1, 1])
@@ -33,37 +39,51 @@ try:
             df = df[df.apply(lambda row: term in row.astype(str).str.lower().to_string(), axis=1)]
     
     if show_pending:
-        # Tries to find a 'Date' column to filter
-        date_cols = [c for c in df.columns if 'DATE' in c.upper() or 'COMPLET' in c.upper()]
-        filter_col = date_cols[-1] if date_cols else df.columns[-1]
-        df = df[df[filter_col].isna() | (df[filter_col].astype(str).str.strip() == "")]
+        # Look for the column that contains 'Completed' or use position 8
+        target = "Date Completed" if "Date Completed" in df.columns else df.columns[8]
+        df = df[df[target].astype(str).str.strip() == ""]
 
-    # 5. Natural Order Logic
-    # This keeps the spreadsheet order exactly as it is in Google Sheets
-    if sort_choice == "Last Record":
-        # Instead of reversing the whole list, we just ensure the scrollbar 
-        # is ready for him to see the end. 
-        df = df.sort_values(by=id_col, ascending=True)
-        st.info("Scroll to the bottom of the table to see record #2292.")
-    else:
-        df = df.sort_values(by=id_col, ascending=True)
-        
-    # 6. Display with Pinned Columns
+    # 5. Sorting (Ascending ensures 2292 is at the bottom)
+    df = df.sort_values(by=df.columns[0], ascending=True)
+
+    # 6. STYLING & ALIGNMENT MAP
+    # We define exactly how each column should behave
     st.data_editor(
         df,
         height=700,
         use_container_width=True,
         hide_index=True,
         column_config={
-            id_col: st.column_config.Column(pinned=True, width="small"),
-            title_col: st.column_config.Column(pinned=True, width="large"),
+            "ID Number": st.column_config.Column(width="small", pinned=True, help="ID"),
+            "First Name": st.column_config.Column(width="medium"),
+            "Surname": st.column_config.Column(width="medium"),
+            "Book Title": st.column_config.Column(width="large"),
+            "Date Requested": st.column_config.Column(width="medium"),
+            "Found Date": st.column_config.Column(width="medium"),
+            "Days Searching": st.column_config.Column(width="small"),
+            "Star Rating": st.column_config.Column(width="small"),
+            "Date Completed": st.column_config.Column(width="medium"),
+            "Notes": st.column_config.Column(width="large"),
         },
         disabled=True
     )
     
-    st.success(f"System Online: {len(df)} Records Loaded")
+    # Custom CSS to force text alignment (Center vs Left)
+    st.markdown("""
+        <style>
+            /* Center align specific columns (1st, 5th, 6th, 8th, 9th) */
+            [data-testid="stTable"] td:nth-child(1), 
+            [data-testid="stTable"] td:nth-child(5),
+            [data-testid="stTable"] td:nth-child(6),
+            [data-testid="stTable"] td:nth-child(8),
+            [data-testid="stTable"] td:nth-child(9) {
+                text-align: center !important;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+
+    if sort_choice == "Last Record":
+        st.info("Showing natural order. Scroll down to see record #2292.")
 
 except Exception as e:
-    st.info("🔄 Refreshing the connection to your Google Sheet...")
-    if st.button("Manual Refresh"):
-        st.rerun()
+    st.error(f"Layout Alignment Error: {e}")
