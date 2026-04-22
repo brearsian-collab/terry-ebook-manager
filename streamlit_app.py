@@ -1,65 +1,75 @@
 import streamlit as st
 import pandas as pd
 
+# 1. Setup
 st.set_page_config(page_title="Ebook Management", layout="wide")
+
 st.title("📚 Ebook Database Management System")
 
+# 2. Connection
 SHEET_ID = "1BnFTueD2eJABxOOuhkgga0pDRz4fpJCY6Qj49ICZ5eU"
 url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
 try:
-    # 1. Pull the data
+    # Pull fresh data
     df = pd.read_csv(url)
     
-    # 2. Map Columns by Position (instead of names)
-    # This ensures that even if Google renames them, the layout stays the same
-    id_col = df.columns[0]     # First column (ID Number)
-    title_col = df.columns[3]  # Fourth column (Book Title)
+    # 3. FORCE EXACT COLUMN ORDER (Matching your Google Sheet)
+    # This ensures ID Number is 1st, then Name, then Title, etc.
+    original_cols = [
+        "ID Number", "First Name", "Surname", "Book Title", 
+        "Date Requested", "Found Date", "Days Searching", 
+        "Star Rating", "Date Completed", "Notes"
+    ]
+    
+    # Only include columns that actually exist in your sheet to avoid errors
+    df = df[[c for c in original_cols if c in df.columns]]
 
-    # 3. Desktop Controls
+    # 4. Controls
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1:
-        search = st.text_input("🔍 Search Database:", placeholder="Type any name or title...")
+        search = st.text_input("🔍 Quick Search:", placeholder="Search names, titles, or IDs...")
     with c2:
         st.write(" ")
-        show_pending = st.checkbox("📋 Show Pending Only")
+        pending = st.checkbox("📋 Show Pending Only")
     with c3:
         st.write(" ")
         sort_choice = st.radio("Jump to:", ["First Record", "Last Record"], horizontal=True)
 
-    # 4. Search Logic
+    # 5. Logic
     if search:
         for term in search.lower().split():
             df = df[df.apply(lambda row: term in row.astype(str).str.lower().to_string(), axis=1)]
     
-    # 5. Pending Logic (Finds blank cells in the 'Date Completed' area)
-    if show_pending:
-        # We look for the column that usually holds the date
-        date_col = next((c for c in df.columns if 'COMPLET' in c.upper()), df.columns[-2])
-        df = df[df[date_col].isna() | (df[date_col].astype(str).str.strip() == "")]
+    if pending:
+        # Filters for rows with no 'Date Completed'
+        df = df[df['Date Completed'].isna() | (df['Date Completed'].astype(str).str.strip() == "")]
 
-    # 6. Flip the list for 'Last Record'
     if sort_choice == "Last Record":
-        df = df.sort_values(by=id_col, ascending=False)
+        df = df.sort_values(by="ID Number", ascending=False)
     else:
-        df = df.sort_values(by=id_col, ascending=True)
+        df = df.sort_values(by="ID Number", ascending=True)
 
-    # 7. Final Spreadsheet View
+    # 6. FIXED ALIGNMENT VIEW
     st.data_editor(
         df,
         height=700,
         use_container_width=True,
         hide_index=True,
         column_config={
-            id_col: st.column_config.Column(pinned=True, width="small"),
-            title_col: st.column_config.Column(pinned=True, width="large"),
+            "ID Number": st.column_config.Column(width="small", pinned=True),
+            "First Name": st.column_config.Column(width="medium"),
+            "Surname": st.column_config.Column(width="medium"),
+            "Book Title": st.column_config.Column(width="large", pinned=True),
+            "Date Requested": st.column_config.Column(width="medium"),
+            "Notes": st.column_config.Column(width="large"),
         },
         disabled=True
     )
     
-    st.success(f"Connected! Showing {len(df)} records. ID and Title are pinned to the left.")
+    st.success(f"Connected: {len(df)} records aligned.")
 
 except Exception as e:
-    st.error(f"The system is connected but waiting for the data to align. Please click 'Refresh' below.")
+    st.error(f"Waiting for data alignment... if this persists, check the 'ID Number' column header in your sheet.")
     if st.button("Refresh System"):
         st.rerun()
