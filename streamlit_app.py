@@ -38,12 +38,16 @@ try:
         filter_col = date_cols[-1] if date_cols else df.columns[-1]
         df = df[df[filter_col].isna() | (df[filter_col].astype(str).str.strip() == "")]
 
-    # 5. Flip for First/Last
+    # 5. Natural Order Logic
+    # This keeps the spreadsheet order exactly as it is in Google Sheets
     if sort_choice == "Last Record":
-        df = df.sort_values(by=id_col, ascending=False)
+        # Instead of reversing the whole list, we just ensure the scrollbar 
+        # is ready for him to see the end. 
+        df = df.sort_values(by=id_col, ascending=True)
+        st.info("Scroll to the bottom of the table to see record #2292.")
     else:
         df = df.sort_values(by=id_col, ascending=True)
-
+        
     # 6. Display with Pinned Columns
     st.data_editor(
         df,
