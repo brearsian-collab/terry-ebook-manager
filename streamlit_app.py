@@ -41,29 +41,32 @@ try:
     if 'page_number' not in st.session_state:
         st.session_state.page_number = 1
 
-    # Navigation Row
-    col_prev, col_page, col_next, col_jump = st.columns([1, 2, 1, 2])
-    
-    with col_jump:
-        # These buttons now work instantly because they just change the page index
-        sub1, sub2 = st.columns(2)
-        if sub1.button("⏮️ Jump to First"):
-            st.session_state.page_number = 1
-        if sub2.button("⏭️ Jump to Last"):
-            st.session_state.page_number = total_pages
+    # Navigation UI Function (so we can use it top and bottom)
+    def render_nav(suffix):
+        col_prev, col_page, col_next, col_jump = st.columns([1, 2, 1, 2])
+        with col_jump:
+            sub1, sub2 = st.columns(2)
+            if sub1.button("⏮️ First Page", key=f"first_{suffix}"):
+                st.session_state.page_number = 1
+                st.rerun()
+            if sub2.button("⏭️ Last Page", key=f"last_{suffix}"):
+                st.session_state.page_number = total_pages
+                st.rerun()
+        with col_prev:
+            if st.button("⬅️ Previous", key=f"prev_{suffix}") and st.session_state.page_number > 1:
+                st.session_state.page_number -= 1
+                st.rerun()
+        with col_next:
+            if st.button("Next ➡️", key=f"next_{suffix}") and st.session_state.page_number < total_pages:
+                st.session_state.page_number += 1
+                st.rerun()
+        with col_page:
+            st.write(f"**Page {st.session_state.page_number} of {total_pages}**")
 
-    with col_prev:
-        if st.button("⬅️ Previous") and st.session_state.page_number > 1:
-            st.session_state.page_number -= 1
-            
-    with col_next:
-        if st.button("Next ➡️") and st.session_state.page_number < total_pages:
-            st.session_state.page_number += 1
-            
-    with col_page:
-        st.write(f"**Page {st.session_state.page_number} of {total_pages}** ({len(df)} total records)")
+    # Render Top Navigation
+    render_nav("top")
 
-    # Slice the dataframe for the current page
+    # Slice the data
     start_idx = (st.session_state.page_number - 1) * items_per_page
     end_idx = start_idx + items_per_page
     df_page = df.iloc[start_idx:end_idx]
@@ -71,7 +74,7 @@ try:
     # 4. Display Table
     st.markdown("""
         <style>
-            .main-table { width: 100%; border-collapse: collapse; font-family: sans-serif; }
+            .main-table { width: 100%; border-collapse: collapse; font-family: sans-serif; margin-bottom: 20px;}
             .main-table th { background-color: #f0f2f6; padding: 10px; border: 1px solid #dee2e6; text-align: center; }
             .main-table td { padding: 8px; border: 1px solid #dee2e6; font-size: 14px; background-color: white; }
             .center-text { text-align: center !important; }
@@ -94,9 +97,18 @@ try:
 
     st.markdown(html, unsafe_allow_html=True)
     
-    # Repeat Nav at bottom for convenience
-    if st.button("⬆️ Back to Top of Page"):
-        st.session_state.page_number = st.session_state.page_number # Triggers refresh
+    # 5. BOTTOM CONTROLS
+    render_nav("bottom")
+    
+    st.write("---")
+    # THE "NUCLEAR" BACK TO TOP BUTTON
+    # This uses a raw HTML button that triggers a browser-level scroll
+    st.components.v1.html("""
+        <button onclick="window.parent.scrollTo({top: 0, behavior: 'smooth'})" 
+                style="padding: 10px 20px; background-color: #f0f2f6; border: 1px solid #dee2e6; border-radius: 5px; cursor: pointer; font-family: sans-serif;">
+            ⬆️ Back to Top of Page
+        </button>
+    """, height=50)
 
 except Exception as e:
     st.error(f"Error: {e}")
