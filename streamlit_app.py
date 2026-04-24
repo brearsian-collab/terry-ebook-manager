@@ -3,16 +3,9 @@ import pandas as pd
 
 st.set_page_config(page_title="Ebook Management", layout="wide")
 
-# JavaScript for Pixel-Perfect Jumping
-def scroll_to_id(target_top=True):
-    if target_top:
-        # Snaps to the absolute top of the page
-        js = "window.parent.scrollTo({top: 0, behavior: 'auto'});"
-    else:
-        # Snaps to the absolute bottom of the entire document
-        js = "window.parent.scrollTo({top: window.parent.document.body.scrollHeight, behavior: 'auto'});"
-    
-    st.components.v1.html(f"<script>{js}</script>", height=0)
+# Initialize scroll state
+if 'scroll_to' not in st.session_state:
+    st.session_state.scroll_to = None
 
 st.title("📚 Ebook Database Management System")
 
@@ -42,15 +35,17 @@ try:
 
     with c3:
         st.write(" ")
-        if st.button("⏮️ First Record"):
-            scroll_to_id(target_top=True)
+        if st.button("⏮️ First"):
+            st.session_state.scroll_to = "top"
+            st.rerun()
 
     with c4:
         st.write(" ")
-        if st.button("⏭️ Last Record"):
-            scroll_to_id(target_top=False)
+        if st.button("⏭️ Last"):
+            st.session_state.scroll_to = "bottom"
+            st.rerun()
 
-    # Filtering Logic
+    # Filtering
     if search:
         for term in search.lower().split():
             df = df[df.apply(lambda row: term in row.astype(str).str.lower().to_string(), axis=1)]
@@ -58,10 +53,9 @@ try:
     if show_pending:
         df = df[df["Found Date"].astype(str).str.strip() == ""]
 
-    # Natural 1-2292 order
     df = df.sort_values(by="ID Number", ascending=True)
 
-    # CSS for Sticky Headers and Visual Clarity
+    # Styling
     st.markdown("""
         <style>
             .main-table { width: 100%; border-collapse: collapse; font-family: sans-serif; }
@@ -81,7 +75,7 @@ try:
         </style>
     """, unsafe_allow_html=True)
 
-    # Build the one big table
+    # Build the table
     html = '<table class="main-table"><thead><tr>'
     for col in df.columns:
         html += f'<th>{col}</th>'
@@ -97,12 +91,15 @@ try:
 
     st.markdown(html, unsafe_allow_html=True)
     
-    # --- BOTTOM NAVIGATION ---
-    st.write("---")
-    bc1, bc2 = st.columns([5, 1])
-    with bc2:
-        if st.button("⏮️ Back to First Record"):
-            scroll_to_id(target_top=True)
+    # --- THE SCROLL ENGINE ---
+    # This checks if we need to scroll AFTER the table has finished rendering
+    if st.session_state.scroll_to == "top":
+        st.components.v1.html("<script>window.parent.scrollTo({top: 0, behavior: 'auto'});</script>", height=0)
+        st.session_state.scroll_to = None # Reset so it doesn't loop
+    
+    elif st.session_state.scroll_to == "bottom":
+        st.components.v1.html("<script>window.parent.scrollTo({top: window.parent.document.body.scrollHeight, behavior: 'auto'});</script>", height=0)
+        st.session_state.scroll_to = None # Reset
 
 except Exception as e:
-    st.error(f"Something went wrong: {e}")
+    st.error(f"System Error: {e}")
