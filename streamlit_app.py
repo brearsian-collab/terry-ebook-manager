@@ -4,22 +4,12 @@ import math
 
 st.set_page_config(page_title="Ebook Management", layout="wide")
 
-# This is the "Magic Script" that fixes the scroll issues
-def force_scroll_top():
+# Function to force the browser to the top of the page
+def scroll_to_top():
     st.components.v1.html(
         """
         <script>
-            window.parent.scrollTo({top: 0, behavior: 'smooth'});
-        </script>
-        """,
-        height=0,
-    )
-
-def force_scroll_bottom():
-    st.components.v1.html(
-        """
-        <script>
-            window.parent.scrollTo({top: window.parent.document.body.scrollHeight, behavior: 'smooth'});
+            window.parent.scrollTo({top: 0, behavior: 'auto'});
         </script>
         """,
         height=0,
@@ -35,11 +25,9 @@ try:
     df_raw = df_raw.fillna("")
     new_names = ["ID Number", "First Name", "Surname", "Book Title", "Date Requested", "Found Date", "Days Searching", "Star Rating", "Date Completed", "Notes"]
     df_raw.columns = new_names[:len(df_raw.columns)]
-    
-    # Cleaning
     df_raw['Days Searching'] = pd.to_numeric(df_raw['Days Searching'], errors='coerce').fillna(0).astype(int).astype(str).replace('0', '')
 
-    # Controls
+    # Search and Filter
     c1, c2 = st.columns([3, 1])
     with c1:
         search = st.text_input("🔍 Search Database:", placeholder="Type name or title...")
@@ -64,39 +52,45 @@ try:
     if 'page_number' not in st.session_state:
         st.session_state.page_number = 1
 
-    # Navigation UI
+    # NAVIGATION UI
     def render_nav(suffix):
-        col_prev, col_page, col_next, col_jump = st.columns([1, 2, 1, 2])
-        with col_jump:
-            sub1, sub2 = st.columns(2)
-            if sub1.button("⏮️ Jump to First", key=f"first_{suffix}"):
-                st.session_state.page_number = 1
-                force_scroll_top()
-                st.rerun()
-            if sub2.button("⏭️ Jump to Last", key=f"last_{suffix}"):
-                st.session_state.page_number = total_pages
-                # We trigger the scroll top here so they see the start of the last page
-                force_scroll_top() 
-                st.rerun()
+        col_prev, col_page, col_next, col_jump1, col_jump2 = st.columns([1, 1.5, 1, 1.5, 1.5])
+        
         with col_prev:
             if st.button("⬅️ Previous", key=f"prev_{suffix}") and st.session_state.page_number > 1:
                 st.session_state.page_number -= 1
-                force_scroll_top()
+                scroll_to_top()
                 st.rerun()
+        
+        with col_page:
+            st.write(f"**Page {st.session_state.page_number} of {total_pages}**")
+            
         with col_next:
             if st.button("Next ➡️", key=f"next_{suffix}") and st.session_state.page_number < total_pages:
                 st.session_state.page_number += 1
-                force_scroll_top()
+                scroll_to_top()
                 st.rerun()
-        with col_page:
-            st.write(f"**Page {st.session_state.page_number} of {total_pages}**")
 
+        with col_jump1:
+            if st.button("⏮️ Jump to First", key=f"first_{suffix}"):
+                st.session_state.page_number = 1
+                scroll_to_top()
+                st.rerun()
+
+        with col_jump2:
+            if st.button("⏭️ Jump to Last", key=f"last_{suffix}"):
+                st.session_state.page_number = total_pages
+                scroll_to_top()
+                st.rerun()
+
+    # Top Navigation
     render_nav("top")
 
-    # Display Data
+    # Slice Data
     start_idx = (st.session_state.page_number - 1) * items_per_page
     df_page = df.iloc[start_idx : start_idx + items_per_page]
 
+    # Table Styling
     st.markdown("""
         <style>
             .main-table { width: 100%; border-collapse: collapse; font-family: sans-serif; }
@@ -122,17 +116,9 @@ try:
 
     st.markdown(html, unsafe_allow_html=True)
     
-    # Bottom Nav
-    render_nav("bottom")
-    
+    # Bottom Navigation
     st.write("---")
-    
-    # Dedicated Scroll Buttons
-    b1, b2 = st.columns(2)
-    if b1.button("⬆️ Scroll to Top of Tab"):
-        force_scroll_top()
-    if b2.button("⬇️ Scroll to Bottom of Tab"):
-        force_scroll_bottom()
+    render_nav("bottom")
 
 except Exception as e:
     st.error(f"Error: {e}")
