@@ -39,12 +39,20 @@ try:
     with c3:
         st.write(" ")
         if st.button("⏮️ First", key="btn_top_first"):
-            st.components.v1.html(f'<script>window.parent.document.getElementById("{TOP_ANCHOR}").scrollIntoView();</script>', height=0)
+            st.components.v1.html(f"""
+                <script>
+                    window.parent.document.getElementById("{TOP_ANCHOR}").scrollIntoView({{behavior: 'smooth'}});
+                </script>
+            """, height=0)
 
     with c4:
         st.write(" ")
         if st.button("⏭️ Last", key="btn_top_last"):
-            st.components.v1.html(f'<script>window.parent.document.getElementById("{BOTTOM_ANCHOR}").scrollIntoView();</script>', height=0)
+            st.components.v1.html(f"""
+                <script>
+                    window.parent.document.getElementById("{BOTTOM_ANCHOR}").scrollIntoView({{behavior: 'smooth'}});
+                </script>
+            """, height=0)
 
     # Filtering Logic
     if search:
@@ -57,12 +65,32 @@ try:
     # Natural 1-2292 order
     df = df.sort_values(by="ID Number", ascending=True)
 
-    # Styling
+    # Styling - FIXED STICKY HEADERS
     st.markdown("""
         <style>
-            .main-table { width: 100%; border-collapse: collapse; font-family: sans-serif; margin-bottom: 20px; }
-            .main-table th { background-color: #f0f2f6; padding: 10px; border: 1px solid #dee2e6; text-align: center; position: sticky; top: 0; z-index: 10; }
-            .main-table td { padding: 8px; border: 1px solid #dee2e6; font-size: 14px; }
+            /* Force the table container to allow sticky headers */
+            .main-table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                font-family: sans-serif; 
+                margin-bottom: 20px; 
+            }
+            
+            /* Sticky Header Logic */
+            .main-table th { 
+                background-color: #f0f2f6 !important; /* Solid background is vital */
+                color: black;
+                padding: 12px; 
+                border: 1px solid #dee2e6; 
+                text-align: center; 
+                position: -webkit-sticky; /* For Safari */
+                position: sticky; 
+                top: -1px; /* Offset to ensure it covers the gap */
+                z-index: 999; /* Stay above the data rows */
+                box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4); /* Adds a shadow so you see it's floating */
+            }
+            
+            .main-table td { padding: 8px; border: 1px solid #dee2e6; font-size: 14px; background-color: white; }
             .center-text { text-align: center !important; }
             .left-text { text-align: left !important; }
         </style>
@@ -89,13 +117,15 @@ try:
     st.markdown(f'<div id="{BOTTOM_ANCHOR}"></div>', unsafe_allow_html=True)
 
     # --- BOTTOM NAVIGATION CONTROLS ---
-    # This adds a "Back to Top" bar at the very bottom so Terry isn't stuck.
     bc1, bc2, bc3 = st.columns([3, 0.5, 0.5])
     with bc2:
-        if st.button("⏮️ First Record", key="btn_bot_first"):
-             st.components.v1.html(f'<script>window.parent.document.getElementById("{TOP_ANCHOR}").scrollIntoView();</script>', height=0)
+        if st.button("⏮️ Back to Top", key="btn_bot_first"):
+             st.components.v1.html(f"""
+                <script>
+                    window.parent.document.getElementById("{TOP_ANCHOR}").scrollIntoView({{behavior: 'smooth'}});
+                </script>
+            """, height=0)
     with bc3:
-        # Just to let him know he's at the end
         st.write("🏁 End of List")
 
 except Exception as e:
